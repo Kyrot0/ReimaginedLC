@@ -153,3 +153,5 @@
 #rlc-root .rlc-arena .rlc-col[data-empty='true']:hover .rlc-col-empty > button, #rlc-root .rlc-arena .rlc-col-empty > button:focus-visible { opacity: 1; }
 #rlc-root .rlc-arena .rlc-col[data-empty='true']:hover { background-color: var(--rlc-color-glassCard, rgba(255, 255, 255, 0.06)); }
 #rlc-root .rlc-arena .rlc-col[data-empty='true']:hover .rlc-col-empty > button { color: var(--rlc-color-text); border-style: solid; }
+
+#rlc-root .rlc-custom-role { width: 100%; max-width: 150px; font-size: 12px; }

@@ -92,6 +92,7 @@ export function Lobby({ lcu, onModes }: { lcu: Lcu; onModes: () => void }) {
       splash={lcu.game.splash}
       isLocal={m ? isLocal(m) : false}
       showPositions={!config.isCustom && config.showPositionSelector}
+      customRole={config.isCustom && config.mapId === 11 && config.gameMode === 'CLASSIC'}
       scarce={data.scarcePositions ?? []}
       forceScarce={config.shouldForceScarcePositionSelection === true}
       label={m?.isBot ? (bots.find((b) => b.id === m.botChampionId)?.name ?? t('bot')) : undefined}

@@ -142,3 +142,37 @@ test('trocar de time com dois cliques envia uma vez', () => {
   });
   expect(fetchMock.mock.calls.filter((c) => c[0] === '/lol-lobby/v2/lobby/team/TEAM2')).toHaveLength(1);
 });
+
+
+test('custom SR mostra uma única rota editável apenas para o jogador local', async () => {
+  mount();
+  expect(root.querySelectorAll('select.rlc-custom-role')).toHaveLength(1);
+  const select = root.querySelector<HTMLSelectElement>('select.rlc-custom-role')!;
+  expect([...select.options].map(o => o.value)).toEqual(['UNSELECTED', 'TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']);
+  act(() => { select.value = 'JUNGLE'; select.dispatchEvent(new Event('change', { bubbles: true })); });
+  await settle();
+  expect(JSON.parse(call('/lol-lobby/v2/lobby/members/localMember/position-preferences', 'PUT')![1].body)).toEqual({ firstPreference: 'JUNGLE', secondPreference: 'UNSELECTED' });
+  expect(select.value).toBe('JUNGLE');
+});
+
+test('custom ARAM não mostra seletor de missão de rota', () => {
+  const lcu = withChampions(fakeLcu());
+  const data = room();
+  data.gameConfig.mapId = 12;
+  data.gameConfig.gameMode = 'ARAM';
+  lcu.lobby.value = ready(data);
+  act(() => render(<Lobby lcu={lcu} onModes={() => {}} />, root));
+  expect(root.querySelector('.rlc-custom-role')).toBeNull();
+});
+
+test('falha ao escolher rota mantém a seleção confirmada', async () => {
+  mount();
+  const select = root.querySelector<HTMLSelectElement>('select.rlc-custom-role')!;
+  expect(select).not.toBeNull();
+  const initial = select.value;
+  fetchMock.mockResolvedValueOnce(new Response('{}', { status: 500 }));
+  act(() => { select.value = 'TOP'; select.dispatchEvent(new Event('change', { bubbles: true })); });
+  await settle();
+  expect(select.value).toBe(initial);
+  expect(select.disabled).toBe(false);
+});

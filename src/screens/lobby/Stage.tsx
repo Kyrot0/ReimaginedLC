@@ -6,6 +6,7 @@ import type { LolLobbyLobbyParticipantDto } from '../../lcu/types';
 import { Rank } from '../../ui/Rank';
 import { useDecoded } from '../../ui/useDecoded';
 import { PositionIcons } from './Positions';
+import { CustomRole } from './CustomRole';
 
 export type Participant = LolLobbyLobbyParticipantDto;
 
@@ -25,6 +26,7 @@ interface ColumnProps {
   splash: Lcu['game']['splash'];
   isLocal?: boolean;
   showPositions?: boolean;
+  customRole?: boolean;
   /** Rotas em alta da fila e se a fila obriga a escolher uma delas (ranqueadas). */
   scarce?: readonly string[];
   forceScarce?: boolean;
@@ -44,7 +46,7 @@ interface ColumnProps {
   searching?: boolean;
 }
 
-export function Column({ member, profile, name, splash: splashOf, isLocal = false, showPositions = false, scarce, forceScarce, label, editPositions = false, rankQueue = null, menu, empty, slots, searching = false }: ColumnProps) {
+export function Column({ member, profile, name, splash: splashOf, isLocal = false, showPositions = false, customRole = false, scarce, forceScarce, label, editPositions = false, rankQueue = null, menu, empty, slots, searching = false }: ColumnProps) {
   const splash = useDecoded(useSplash(member, profile, splashOf));
   const resolved = useName(member, name);
   if (!member) {
@@ -61,6 +63,7 @@ export function Column({ member, profile, name, splash: splashOf, isLocal = fals
         {member.isLeader ? <span class="rlc-col-leader" title={t('leaderMark')} aria-label={t('leaderMark')}> ★</span> : null}
       </span>
       {showPositions ? <PositionIcons first={member.firstPositionPreference} second={member.secondPositionPreference} editable={editPositions} scarce={scarce} force={forceScarce} /> : null}
+      {customRole && isLocal && !member.isBot && !member.isSpectator ? <CustomRole first={member.firstPositionPreference} /> : null}
       {member.isBot ? null : <Rank puuid={member.puuid} queue={rankQueue} />}
       {slots}
     </>
