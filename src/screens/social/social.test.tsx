@@ -9,7 +9,7 @@ import { fakeLcu, friend, ready } from '../../test/fixtures';
 import { ChatDock, ChatWindow, messageTime } from './Chat';
 import { ContextChat, roomChatOpen } from './ContextChat';
 import { openParty } from './FriendCard';
-import { AddFriend, FriendRequests, StatusEditor } from './FriendTools';
+import { AddFriend, FRIEND_REQUESTS_REFRESH_MS, FriendRequests, StatusEditor } from './FriendTools';
 
 let root: HTMLElement;
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -368,4 +368,58 @@ test('festa aberta do amigo: id da festa na presença (pty), só aberta, com vag
   expect(openParty(pty({}), 'festa-1')).toBe(null);
   expect(openParty(friend())).toBe(null);
   expect(openParty(friend({ lol: { pty: '{quebrado' } }))).toBe(null);
+});
+
+
+test('pedidos enviados aparecem sem evento da LCU e a releitura para ao desmontar', async () => {
+  vi.useFakeTimers();
+  try {
+    const lcu = withValues({ friendRequests: ready([]) });
+    let sent = false;
+    const refresh = vi.fn(async () => {
+      lcu.friendRequests.value = ready(sent ? [{ puuid: 'p-zeca', gameName: 'Zeca', tagLine: 'BR1', direction: 'out', summonerId: 1, icon: 1, id: '1', name: 'Zeca', pid: '', note: '' }] : []);
+    });
+    lcu.friendRequests.refresh = refresh;
+    await act(async () => render(<FriendRequests lcu={lcu} />, root));
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(root.querySelector('.rlc-req')).toBeNull();
+    sent = true;
+    await act(async () => { await vi.advanceTimersByTimeAsync(FRIEND_REQUESTS_REFRESH_MS); });
+    expect(root.querySelector('.rlc-req')!.textContent).toContain('Zeca');
+    expect(refresh).toHaveBeenCalledTimes(2);
+    act(() => render(null, root));
+    await vi.advanceTimersByTimeAsync(FRIEND_REQUESTS_REFRESH_MS);
+    window.dispatchEvent(new Event('focus'));
+    expect(refresh).toHaveBeenCalledTimes(2);
+  } finally { vi.useRealTimers(); }
+});
+
+test('pedidos: relê ao voltar ao client, mas não enquanto a camada está desligada', async () => {
+  const lcu = withValues();
+  lcu.friendRequests.refresh = vi.fn(async () => {});
+  root.id = 'rlc-root';
+  root.dataset.visible = 'false';
+  await act(async () => render(<FriendRequests lcu={lcu} />, root));
+  expect(lcu.friendRequests.refresh).not.toHaveBeenCalled();
+  root.dataset.visible = 'true';
+  await act(async () => { window.dispatchEvent(new Event('focus')); });
+  expect(lcu.friendRequests.refresh).toHaveBeenCalledTimes(1);
+});
+
+test('adicionar amigo só avisa para atualizar a lista depois da confirmação do client', async () => {
+  const onSent = vi.fn();
+  let confirm!: (response: Response) => void;
+  fetchMock.mockImplementation(() => new Promise<Response>(resolve => { confirm = resolve; }));
+  act(() => render(<AddFriend onSent={onSent} />, root));
+  type(root.querySelector('input')!, 'Zeca#BR1');
+  act(() => btn('Adicionar')!.click());
+  expect(onSent).not.toHaveBeenCalled();
+  confirm(new Response(null, { status: 204 }));
+  await settle();
+  expect(onSent).toHaveBeenCalledTimes(1);
+  fetchMock.mockResolvedValue(new Response('{}', { status: 400 }));
+  type(root.querySelector('input')!, 'Fulano#BR1');
+  act(() => btn('Adicionar')!.click());
+  await settle();
+  expect(onSent).toHaveBeenCalledTimes(1);
 });

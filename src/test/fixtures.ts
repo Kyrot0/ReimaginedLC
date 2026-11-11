@@ -104,7 +104,7 @@ export function fakeLcu(over: Partial<Lcu> = {}): Lcu {
     gridChampions: signal(ready([])),
     chatMe: signal(ready<Lcu['chatMe']['value']['data'] & object>(null)),
     wallet: Object.assign(signal(ready<Record<string, number>>(null)), { refresh: async () => {} }),
-    friendRequests: signal(ready([])),
+    friendRequests: Object.assign(signal(ready([])), { refresh: async () => {} }),
     audioSettings: signal(ready<{ data?: import('../shell/sound').ClientAudio }>(null)),
     conversations: Object.assign(signal(ready([])), { refresh: async () => {} }),
     loot: Object.assign(signal(ready([])), { refresh: async () => {} }),

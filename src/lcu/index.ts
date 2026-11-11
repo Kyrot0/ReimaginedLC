@@ -80,7 +80,7 @@ export interface Lcu {
   wallet: Signal<StoreState<Record<string, number>>> & { refresh: () => Promise<void> };
   /** Essência Laranja (espólio `CURRENCY_cosmetic`). */
   orangeEssence: Signal<StoreState<LolLootPlayerLoot>> & { refresh: () => Promise<void> };
-  friendRequests: Signal<StoreState<LolChatFriendRequestResource[]>>;
+  friendRequests: Signal<StoreState<LolChatFriendRequestResource[]>> & { refresh: () => Promise<void> };
   /** Som do client (Configurações › Som): o mesmo que o rcp-fe-audio da Riot segue. */
   audioSettings: Signal<StoreState<{ data?: ClientAudio }>>;
   conversations: Signal<StoreState<LolChatConversationResource[]>> & { refresh: () => Promise<void> };

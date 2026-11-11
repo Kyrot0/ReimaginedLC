@@ -131,7 +131,7 @@ export function RightColumn({ lcu, open: wanted, onOpen, onClose, onFriend, onPr
           <div class="rlc-rc-row rlc-rc-tools">
             <div class="rlc-rc-label">
               {adding ? (
-                <AddFriend onDone={() => setAdding(false)} />
+                <AddFriend onDone={() => setAdding(false)} onSent={() => void lcu.friendRequests.refresh()} />
               ) : (
                 <input type="search" class="rlc-input rlc-rc-search" placeholder={t('searchFriendsList')} aria-label={t('searchFriendsList')} value={query} onInput={(e) => setQuery(e.currentTarget.value)} />
               )}

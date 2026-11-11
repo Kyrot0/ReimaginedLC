@@ -10,6 +10,7 @@ import { useAction } from '../../ui/useAction';
 
 const REQUESTS = '/lol-chat/v2/friend-requests';
 const FOLDERS = 'rlc.friendFolders';
+export const FRIEND_REQUESTS_REFRESH_MS = 15_000;
 
 /** Pastas abertas/fechadas à mão, guardadas entre aberturas do client. Lê e grava o mapa inteiro para uma pasta não apagar a outra. */
 const savedFolders = (): Record<string, boolean> => {
@@ -47,19 +48,38 @@ export function Folder({ id, title, count, auto, forceOpen = false, children }: 
 
 /** Pedidos de amizade: recebidos (aceitar, recusar) e enviados (cancelar). */
 export function FriendRequests({ lcu }: { lcu: Lcu }) {
+  // A LCU pode perder o aviso de um pedido enviado. Relê ao abrir a gaveta,
+  // ao voltar ao client e enquanto a lista estiver visível, mesmo se vazia.
+  useEffect(() => {
+    let busy = false;
+    const refresh = async () => {
+      if (busy || document.hidden || document.getElementById('rlc-root')?.dataset.visible === 'false') return;
+      busy = true;
+      try { await lcu.friendRequests.refresh(); } finally { busy = false; }
+    };
+    void refresh();
+    const timer = setInterval(() => void refresh(), FRIEND_REQUESTS_REFRESH_MS);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [lcu]);
   const list = lcu.friendRequests.value.data ?? [];
   if (!list.length) return null;
   return (
     <Folder id="requests" title={t('friendRequests')} count={String(list.length)} auto>
-      {() => list.map((r) => <RequestRow key={r.puuid} request={r} />)}
+      {() => list.map((r) => <RequestRow key={r.puuid} request={r} refresh={() => lcu.friendRequests.refresh()} />)}
     </Folder>
   );
 }
 
-function RequestRow({ request: r }: { request: LolChatFriendRequestResource }) {
+function RequestRow({ request: r, refresh }: { request: LolChatFriendRequestResource; refresh: () => Promise<void> }) {
   const url = `${REQUESTS}/${encodeURIComponent(r.puuid)}`;
-  const accept = useAction(() => request('PUT', url, { direction: 'both' }));
-  const remove = useAction(() => request('DELETE', url));
+  const accept = useAction(async () => { await request('PUT', url, { direction: 'both' }); await refresh(); });
+  const remove = useAction(async () => { await request('DELETE', url); await refresh(); });
   const busy = accept.pending || remove.pending;
   return (
     <div class="rlc-req">
@@ -95,7 +115,7 @@ export function parseRiotId(text: string): { gameName: string; tagLine: string }
 }
 
 /** Adicionar amigo por Riot ID; Esc ou envio feito fecham (`onDone`). */
-export function AddFriend({ onDone }: { onDone?: () => void }) {
+export function AddFriend({ onDone, onSent }: { onDone?: () => void; onSent?: () => void }) {
   const [value, setValue] = useState('');
   const id = parseRiotId(value);
   const input = useRef<HTMLInputElement>(null);
@@ -103,6 +123,7 @@ export function AddFriend({ onDone }: { onDone?: () => void }) {
   useEffect(() => void (onDone && input.current?.focus()), []);
   const send = useAction(async () => {
     await request('POST', REQUESTS, { ...id!, direction: 'out' });
+    onSent?.();
     setValue('');
     onDone?.();
   });
